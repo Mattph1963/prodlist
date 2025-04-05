@@ -1,33 +1,31 @@
 from flask import Flask
 from flask_cors import CORS
 import json
+import requests
 
-app = Flask("List of products")
+app = Flask(__name__)
 CORS(app)
 
-@app.route("/products")
-def getProductsList():
-  products = []
-  with open("products.json", "r") as prodfile:
-    data = json.load(prodfile)
-    for product in data["products"]:
-      products.append(product["product"])
-    return {"products":products}
+@app.route('/products')
+def get_products():
+    with open('products.json', 'r') as f:
+        data = json.load(f)
+    return data
 
-@app.route("/getdealers/<product>")
-def getDealers(product):
-  products = []
-  ret = False
-  with open("products.json", "r") as prodfile:
-    data = json.load(prodfile)
-    for productMeta in data["products"]:
-      if productMeta["product"] == product:
-        ret = True
-        return {"dealers":productMeta["Dealers"]}
-  if ret == False:
-    return {"message":"Could not find dealers for this product"}
+@app.route('/getdealers/<product>')
+def get_dealers(product):
+    # Fetch dealers from dealerdetails
+    dealer_url = "https://dealerdetails.onrender.com/allprice/" + product
+    try:
+        response = requests.get(dealer_url)
+        data = response.json()
+        if 'prices' in data:
+            dealers = [price['key'] for price in data['prices']]
+            return {'dealers': dealers}
+        else:
+            return {'dealers': []}
+    except:
+        return {'dealers': []}
 
-if __name__=="__main__":
-    app.run(debug=True) 
-    # When no port is specified, starts at default port 5000
-
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
